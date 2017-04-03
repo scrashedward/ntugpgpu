@@ -1,9 +1,10 @@
 #include "lab1.h"
+#include "math_constants.h"
 static const unsigned W = 640;
 static const unsigned H = 480;
-static const unsigned NFRAME = 480;
-static const unsigned s[9] = {0,0,0,1,1,1,2,2,2};
-static const unsigned slen = 9; 
+static const unsigned NFRAME = 960;
+static const unsigned s[13] = {1,1,1,1,1,1,2,0,0,0,0,0,0};
+static const unsigned slen = 13;
 
 __global__ void g(uint8_t *yuv, int* gs, int t);
 __global__ void debug(uint8_t *yuv);
@@ -44,29 +45,23 @@ void Lab1VideoGenerator::Generate(uint8_t *yuv) {
 __global__ void g(uint8_t *yuv, int* gs, int t){
 	int x = threadIdx.x;
 	int y = blockIdx.x;
-	float ra[3] = { 1.8 + (1.8/(float)640)*float(x), 1.8 + (1.8/(float)480)*float(y), 2.8 + (0.5/float(480))*float(t)};
+	float ra[3] = { 4 - (0.6/(float)640)*float(y), 2.5 + (0.8/(float)480)*float(x), 0 + (4/float(960))*float(t)};
 	float r1;
 	float x1= 0.5,s=0;
-	for(int i = 0 ; i < 150;i++){
-		r1 = ra[gs[i%9]];
+	for(int i = 0 ; i < 200;i++){
+		r1 = ra[gs[i%13]];
 		x1 = r1*x1*(1-x1);
 		s += logf(0.00001 + fabs(r1*(1-2*x1)));
 	}
-	s/=150;
-	s*=205;
-	s+=50;
-	//s+=100;
+	s = (atanf(s) + CUDART_PI_F/2)/CUDART_PI_F;
 	float r,g,b;
-	r = 175-s;
-	g = (s-70)*1.5;
-	if(r<0)r=0;
-	if(r>255) r=255;
-	if(g>255) g=255;
-	b = 100-s;
-	if(g<0) g=0;
-	if(b<0) b=0;
-	yuv[y*640+x] = (uint8_t)(r*0.299+g*0.587+b*0.114);
-	if(!y%2&&!x%2)
-	yuv[640*480+(320*(y/2)+x/2)] = -0.169*r-0.331*g + b*0.5+128;
-	yuv[640*600+(320*(y/2)+x/2)] = 0.5*r-0.419*g-0.081*b + 128;
+	r = (1-s)*255;
+	g = (1-s)*193;
+	b = (1-s)*37+s*205;
+	yuv[y*640+x] = (uint8_t)(r*0.299 + g*0.587 + b*0.114);
+	if(y%2==0 && x%2==0){
+		yuv[640*480+(320*(y/2)+x/2)] = -0.169*r - g*0.289 + 0.5*b + 128;
+		yuv[640*600+(320*(y/2)+x/2)] = 0.5*r - g*0.515 - 0.081*b + 128;
+	}
+
 }
