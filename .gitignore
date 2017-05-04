@@ -155,3 +155,7 @@ $RECYCLE.BIN/
 # Mac desktop service store files
 .DS_Store
 lab1/lab1.rar
+lab2/lab2/counting.cu.deps
+lab2/lab2/lab2.sln
+lab2/lab2/lab2/lab2.vcxproj
+lab2/lab2/main.cu.deps
