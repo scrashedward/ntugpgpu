@@ -48,6 +48,13 @@ __global__ void CalculateFixed(
 	int bgx = ox + x;
 	int bgy = oy + y;
 	int idx = y * wt + x;
+
+	if(bgx < 0) bgx = -bgx;
+	else if( bgx > wb ) bgx = 2 * wb - bgx;
+
+	if(bgy < 0) bgy = -bgy;
+	else if (bgy > hb ) bgy = 2 * hb - bgy;
+
 	int bidx = bgy * wb + bgx;
 
 	for(int i=0;i<3;i++){
