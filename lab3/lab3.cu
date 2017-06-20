@@ -51,13 +51,15 @@ __global__ void CalculateFixed(
 
 	if(bgx < 0) bgx = -bgx;
 	else if( bgx > wb ) bgx = 2 * wb - bgx;
+	else if (bgx == wb ) bgx--;
 
 	if(bgy < 0) bgy = -bgy;
 	else if (bgy > hb ) bgy = 2 * hb - bgy;
+	else if (bgy == hb) bgy--;
 
 	int bidx = bgy * wb + bgx;
 
-	if( x >= wt || y >= ht || bgx >= wb || bgx < 0 || bgy >= hb || bgy < 0) return;
+	if( x >= wt || y >= ht ) return;//|| bgx >= wb || bgx < 0 || bgy >= hb || bgy < 0) return;
 
 	for(int i=0;i<3;i++){
 		if(mask[idx] < 127){
