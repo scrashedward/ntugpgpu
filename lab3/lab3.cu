@@ -143,7 +143,7 @@ __global__ void PoissonImageCloningIteration(
 __global__ void DownSample(
 	const float *input,
 	float *output,
-	int wt, int ht
+	int wt, int ht, int rounds
 )
 {
 	int tx = threadIdx.x;
@@ -153,13 +153,15 @@ __global__ void DownSample(
 	int x = bx * 32 + tx * 2;
 	int y = by * 16 + ty * 2;
 
-	for(int i = 0; i < 3; i++){
+	if ( x >= wt || y >= ht) return;
+
+	for(int i = 0; i < rounds; i++){
 		float r = 0;
-		r += input[(y*wt + x) * 3 + i];
-		r += input[((y+1)*wt + x) * 3 + i];
-		r += input[(y * wt + x + 1) * 3 + i];
-		r += input[((y+1)*wt + x + 1) * 3 + i];
-		output[(y/2*wt/2 + x / 2)*3 + i] = r/4;
+		r += input[(y*wt + x) * rounds + i];
+		r += input[((y+1)*wt + x) * rounds + i];
+		r += input[(y * wt + x + 1) * rounds + i];
+		r += input[((y+1)*wt + x + 1) * rounds + i];
+		output[(y/2*wt/2 + x / 2)*rounds + i] = r/4;
 	}
 
 }
@@ -180,6 +182,8 @@ __global__ void UpSample(
 	int idx = y * wt + x;
 
 	float lu = 0, ld = 0, ru = 0, rd = 0;
+
+	if (y >= ht || x >= wt) return;
 
 	for(int i = 0 ; i < 3 ; i++ ){
 		if(x == 0){
@@ -261,18 +265,18 @@ void PoissonImageCloning(
 	cudaMalloc(&df, 3 * wt * ht * sizeof(float)/4);
 	cudaMalloc(&db1, 3 * wt * ht * sizeof(float) / 4);
 	cudaMalloc(&db2, 3 * wt * ht * sizeof(float) / 4);
-	cudaMalloc(&dmask, 3 * wt * ht * sizeof(float) /4);
+	cudaMalloc(&dmask,  wt * ht * sizeof(float) /4);
 
 	dim3 gdim(CeilDiv(wt, 32), CeilDiv(ht, 16)), bdim(32,16);
 	CalculateFixed<<<gdim, bdim>>>(
 		background, target, mask, fixed,
 		wb, hb, wt, ht, oy, ox
 	);
-	/**
+	
 	//scaling part, please enable this part for scaling acceleration
-	DownSample<<<gdim, dim3(16, 8)>>>(fixed, df, wt, ht);
-	DownSample<<<gdim, dim3(16, 8)>>>(target, db1, wt, ht);
-	DownSample<<<gdim, dim3(16, 8)>>>(mask, dmask, wt, ht);
+	DownSample<<<gdim, dim3(16, 8)>>>(fixed, df, wt, ht, 3);
+	DownSample<<<gdim, dim3(16, 8)>>>(target, db1, wt, ht, 3);
+	DownSample<<<gdim, dim3(16, 8)>>>(mask, dmask, wt, ht, 1);
 	for(int i = 0 ; i < 2500; i++){
 		PoissonImageCloningIteration<<<gdim, dim3(16, 8)>>>(
 			df, dmask, db1, db2, wt/2, ht/2, 1
@@ -282,7 +286,7 @@ void PoissonImageCloning(
 		);
 	}
 	UpSample<<<gdim, dim3(16, 8)>>>(db1, buf1, wt/2, ht/2);
-	**/
+
 	
 	//Background acceleration part, please enable this part for background acceleration
 	//for(int i = 0; i < ht; i++){
@@ -290,7 +294,7 @@ void PoissonImageCloning(
 	//}
 
 	// Normal Copy, please disable this part for background acceleration and scaling acceleration
-	cudaMemcpy(buf1, target, sizeof(float)*3*wt*ht, cudaMemcpyDeviceToDevice);
+	//cudaMemcpy(buf1, target, sizeof(float)*3*wt*ht, cudaMemcpyDeviceToDevice);
 
 	cudaError_t error = cudaDeviceSynchronize();
 	if( error != cudaSuccess) cout << cudaGetErrorString(error) << endl;
