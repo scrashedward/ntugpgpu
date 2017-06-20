@@ -57,7 +57,7 @@ __global__ void CalculateFixed(
 
 	int bidx = bgy * wb + bgx;
 
-	if( x >= wt || y >= ht) return;
+	if( x >= wt || y >= ht || bgx >= wb || bgx < 0 || bgy >= hb || bgy < 0) return;
 
 	for(int i=0;i<3;i++){
 		if(mask[idx] < 127){
