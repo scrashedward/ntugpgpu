@@ -57,6 +57,8 @@ __global__ void CalculateFixed(
 
 	int bidx = bgy * wb + bgx;
 
+	if( x >= wt || y >= ht) return;
+
 	for(int i=0;i<3;i++){
 		if(mask[idx] < 127){
 			fixed[idx*3 + i] = background[bidx*3 + i];
@@ -113,6 +115,8 @@ __global__ void PoissonImageCloningIteration(
 	int x = bx * blockDim.x + tx;
 	int y = by * blockDim.y + ty;
 	int idx = y * wt + x;
+
+	if ( x >= wt || y >= ht) return;
 
 	for(int i = 0; i < 3; i++){
 		if (mask[idx] < 127 ){
@@ -264,7 +268,7 @@ void PoissonImageCloning(
 		background, target, mask, fixed,
 		wb, hb, wt, ht, oy, ox
 	);
-	
+	/**
 	//scaling part, please enable this part for scaling acceleration
 	DownSample<<<gdim, dim3(16, 8)>>>(fixed, df, wt, ht);
 	DownSample<<<gdim, dim3(16, 8)>>>(target, db1, wt, ht);
@@ -278,7 +282,7 @@ void PoissonImageCloning(
 		);
 	}
 	UpSample<<<gdim, dim3(16, 8)>>>(db1, buf1, wt/2, ht/2);
-	
+	**/
 	
 	//Background acceleration part, please enable this part for background acceleration
 	//for(int i = 0; i < ht; i++){
@@ -286,7 +290,7 @@ void PoissonImageCloning(
 	//}
 
 	// Normal Copy, please disable this part for background acceleration and scaling acceleration
-	//cudaMemcpy(buf1, target, sizeof(float)*3*wt*ht, cudaMemcpyDeviceToDevice);
+	cudaMemcpy(buf1, target, sizeof(float)*3*wt*ht, cudaMemcpyDeviceToDevice);
 
 	cudaError_t error = cudaDeviceSynchronize();
 	if( error != cudaSuccess) cout << cudaGetErrorString(error) << endl;
